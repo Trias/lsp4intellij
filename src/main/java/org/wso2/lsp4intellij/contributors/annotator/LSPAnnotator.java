@@ -58,10 +58,6 @@ public class LSPAnnotator extends ExternalAnnotator<Object, Object> {
                 return null;
             }
 
-            // If the diagnostics list is locked, we need to skip annotating the file.
-            if (!(eventManager.isDiagnosticSyncRequired() || eventManager.isCodeActionSyncRequired())) {
-                return null;
-            }
             return RESULT;
         } catch (Exception e) {
             return null;
@@ -77,12 +73,20 @@ public class LSPAnnotator extends ExternalAnnotator<Object, Object> {
     @Override
     public void apply(@NotNull PsiFile file, Object annotationResult, @NotNull AnnotationHolder holder) {
 
+
         VirtualFile virtualFile = file.getVirtualFile();
         if (FileUtils.isFileSupported(virtualFile) && IntellijLanguageClient.isExtensionSupported(virtualFile)) {
             String uri = FileUtils.VFSToURI(virtualFile);
             // TODO annotations are applied to a file / document not to an editor. so store them by file and not by editor..
             EditorEventManager eventManager = EditorEventManagerBase.forUri(uri);
 
+            // If the diagnostics list is locked, we need to skip annotating the file.
+            if (!(eventManager.isDiagnosticSyncRequired() || eventManager.isCodeActionSyncRequired())) {
+               // return;
+            }
+
+            createAnnotations(holder, eventManager);
+/*
             if (eventManager.isCodeActionSyncRequired()) {
                 try {
                     updateAnnotations(holder, eventManager);
@@ -101,7 +105,13 @@ public class LSPAnnotator extends ExternalAnnotator<Object, Object> {
                 } catch (Throwable t) {
                     LOG.warn("Error occurred when updating LSP code actions.", t);
                 }
+            } else{
+                LOG.warn("no annotations");
             }
+
+ */
+        }else{
+            LOG.warn("no annotations");
         }
     }
 
