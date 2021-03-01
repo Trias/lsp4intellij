@@ -17,6 +17,7 @@ package org.wso2.lsp4intellij.editor;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
+import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.event.DocumentEvent;
 import com.intellij.openapi.editor.event.DocumentListener;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
@@ -55,7 +56,7 @@ public class DocumentEventManager {
 
     private final Set<Document> openDocuments = new HashSet<>();
 
-    DocumentEventManager(Document document, DocumentListener documentListener, TextDocumentSyncKind syncKind, LanguageServerWrapper wrapper){
+    DocumentEventManager(Document document, DocumentListener documentListener, TextDocumentSyncKind syncKind, LanguageServerWrapper wrapper) {
         this.document = document;
         this.documentListener = documentListener;
         this.syncKind = syncKind;
@@ -63,9 +64,13 @@ public class DocumentEventManager {
         this.identifier = new TextDocumentIdentifier(FileUtils.documentToUri(document));
     }
 
-    public static DocumentEventManager getOrCreateDocumentManager(Document document, DocumentListener listener, TextDocumentSyncKind syncKind, LanguageServerWrapper wrapper){
+    public static void clearState() {
+        uriToDocumentEventManager.clear();
+    }
+
+    public static DocumentEventManager getOrCreateDocumentManager(Document document, DocumentListener listener, TextDocumentSyncKind syncKind, LanguageServerWrapper wrapper) {
         DocumentEventManager manager = uriToDocumentEventManager.get(FileUtils.documentToUri(document));
-        if(manager != null){
+        if (manager != null) {
             return manager;
         }
 
@@ -83,7 +88,7 @@ public class DocumentEventManager {
         document.addDocumentListener(documentListener);
     }
 
-    public int getDocumentVersion(){
+    public int getDocumentVersion() {
         return this.version;
     }
 
@@ -100,7 +105,13 @@ public class DocumentEventManager {
             CharSequence newText = event.getNewFragment();
             int offset = event.getOffset();
             int newTextLength = event.getNewLength();
-            Position lspPosition = DocumentUtils.offsetToLSPPos(document, offset);
+            EditorEventManager editorEventManager = EditorEventManagerBase.managersForUri(FileUtils.documentToUri(document)).iterator().next();
+            if (editorEventManager == null) {
+                LOG.warn("no editor associated with document");
+                return;
+            }
+            Editor editor = editorEventManager.editor;
+            Position lspPosition = DocumentUtils.offsetToLSPPos(editor, offset);
             int startLine = lspPosition.getLine();
             int startColumn = lspPosition.getCharacter();
             CharSequence oldText = event.getOldFragment();
@@ -141,11 +152,11 @@ public class DocumentEventManager {
     }
 
     public void documentClosed() {
-        if(!openDocuments.contains(document)) {
+        if (!openDocuments.contains(document)) {
             LOG.warn("trying to close document which is not open");
-        }else if(EditorEventManagerBase.managersForUri(FileUtils.documentToUri(document)).size() > 1){
+        } else if (EditorEventManagerBase.managersForUri(FileUtils.documentToUri(document)).size() > 1) {
             LOG.warn("trying to close document which is still open in another editor!");
-        }else{
+        } else {
             openDocuments.remove(document);
             wrapper.getRequestManager().didClose(new DidCloseTextDocumentParams(identifier));
         }
