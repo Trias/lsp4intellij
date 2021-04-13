@@ -98,13 +98,19 @@ public class DocumentEventManager {
                 Collections.singletonList(new TextDocumentContentChangeEvent()));
         changesParams.getTextDocument().setUri(identifier.getUri());
 
-        changesParams.getTextDocument().setVersion(version++);
+
+        changesParams.getTextDocument().setVersion(++version);
 
         if (syncKind == TextDocumentSyncKind.Incremental) {
             TextDocumentContentChangeEvent changeEvent = changesParams.getContentChanges().get(0);
             CharSequence newText = event.getNewFragment();
             int offset = event.getOffset();
             int newTextLength = event.getNewLength();
+            Set<EditorEventManager> managersForUri = EditorEventManagerBase.managersForUri(FileUtils.documentToUri(document));
+            if (managersForUri == null || managersForUri.isEmpty()) {
+                LOG.warn("no manager associated with uri");
+                return;
+            }
             EditorEventManager editorEventManager = EditorEventManagerBase.managersForUri(FileUtils.documentToUri(document)).iterator().next();
             if (editorEventManager == null) {
                 LOG.warn("no editor associated with document");
@@ -112,6 +118,9 @@ public class DocumentEventManager {
             }
             Editor editor = editorEventManager.editor;
             Position lspPosition = DocumentUtils.offsetToLSPPos(editor, offset);
+            if (lspPosition == null) {
+                return;
+            }
             int startLine = lspPosition.getLine();
             int startColumn = lspPosition.getCharacter();
             CharSequence oldText = event.getOldFragment();
@@ -146,7 +155,7 @@ public class DocumentEventManager {
             final String extension = FileDocumentManager.getInstance().getFile(document).getExtension();
             wrapper.getRequestManager().didOpen(new DidOpenTextDocumentParams(new TextDocumentItem(identifier.getUri(),
                     wrapper.serverDefinition.languageIdFor(extension),
-                    version++,
+                    ++version,
                     document.getText())));
         }
     }
