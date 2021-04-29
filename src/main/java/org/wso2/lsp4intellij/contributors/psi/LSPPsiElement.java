@@ -59,6 +59,7 @@ import org.wso2.lsp4intellij.utils.FileUtils;
 import javax.annotation.Nullable;
 import javax.swing.*;
 
+import static org.wso2.lsp4intellij.utils.ApplicationUtils.invokeAfterPsiEvents;
 import static org.wso2.lsp4intellij.utils.ApplicationUtils.writeAction;
 
 /**
@@ -735,15 +736,18 @@ public class LSPPsiElement implements PsiNameIdentifierOwner, NavigatablePsiElem
                 editor = FileEditorManager.getInstance(getProject()).openTextEditor(descriptor, false);
             }
 
-            EditorEventManager manager = EditorEventManagerBase.forEditor(editor);
-            if(manager != null){
-                manager.gotoLocation(
-                        new Location(
-                                FileUtils.uriFromVirtualFile(getContainingFile().getVirtualFile()),
-                                new Range(
-                                        DocumentUtils.offsetToLSPPos(editor, this.start),
-                                        DocumentUtils.offsetToLSPPos(editor, this.end))));
-            }
+            Editor finalEditor = editor;
+            invokeAfterPsiEvents(() -> {
+                EditorEventManager manager = EditorEventManagerBase.forEditor(finalEditor);
+                if (manager != null) {
+                    manager.gotoLocation(
+                            new Location(
+                                    FileUtils.uriFromVirtualFile(getContainingFile().getVirtualFile()),
+                                    new Range(
+                                            DocumentUtils.offsetToLSPPos(finalEditor, this.start),
+                                            DocumentUtils.offsetToLSPPos(finalEditor, this.end))));
+                }
+            });
         });
     }
 
