@@ -25,6 +25,7 @@ import org.wso2.lsp4intellij.requests.Timeouts;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 public class ApplicationUtils {
@@ -49,7 +50,11 @@ public class ApplicationUtils {
     }
 
     static public void pool(Runnable runnable) {
-        EXECUTOR_SERVICE.submit(runnable);
+        try{
+            EXECUTOR_SERVICE.submit(runnable);
+        }catch(RejectedExecutionException e){
+            // ignore...
+        }
     }
 
     static public void restartPool() {
