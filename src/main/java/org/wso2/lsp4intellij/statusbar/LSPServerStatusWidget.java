@@ -57,7 +57,7 @@ public class LSPServerStatusWidget implements StatusBarWidget {
     private final Map<Timeouts, Pair<Integer, Integer>> timeouts = new HashMap<>();
     private final Project project;
     private final String projectName;
-    private ServerStatus status = ServerStatus.STOPPED;
+    private ServerStatus status = null;
 
     LSPServerStatusWidget(Project project) {
         this.project = project;
@@ -112,7 +112,9 @@ public class LSPServerStatusWidget implements StatusBarWidget {
             if (statusBar != null)
                 ApplicationUtils.invokeLater(() -> {
                     StatusBarWidgetFactory factory = ServiceManager.getService(StatusBarWidgetFactory.class);
-                    factory.disposeWidget(this);
+                    if (factory != null) {
+                        factory.disposeWidget(this);
+                    }
                 });
         }
     }
